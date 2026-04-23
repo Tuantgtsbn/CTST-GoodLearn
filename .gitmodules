@@ -1,0 +1,12 @@
+[submodule "Frontend"]
+	path = Frontend
+	url = https://github.com/Tuantgtsbn/FE_GoodLearn.git
+[submodule "Backend"]
+	path = Backend
+	url = https://github.com/Tuantgtsbn/BE_GoodLearn.git
+[submodule "SongService"]
+	path = SongService
+	url = https://github.com/Tuantgtsbn/GoodLearn-SongService.git
+[submodule "ServiceTTS"]
+	path = ServiceTTS
+	url = https://github.com/Tuantgtsbn/GoodLearn-ServiceTTS.git

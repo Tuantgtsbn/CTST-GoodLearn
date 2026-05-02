@@ -1,151 +1,125 @@
 services:
-    redis:
-        image: redis:7.2-alpine
-        container_name: goodlearn-redis
-        restart: always
-        ports:
-            - '127.0.0.1:6379:6379'
-        command: >
-            redis-server
-            --requirepass ${REDIS_PASSWORD:-123456}
-            --appendonly yes
-            --appendfsync everysec
-            --maxmemory 512mb
-            --maxmemory-policy noeviction
-        volumes:
-            - redis_data:/data
-        healthcheck:
-            test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-123456}', 'ping']
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        networks:
-            - goodlearn_network
+  redis:
+    image: redis:7.2-alpine
+    container_name: goodlearn-redis
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-123456}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-123456}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - goodlearn_network
 
-    postgres:
-        image: postgres:17.6-alpine
-        container_name: goodlearn-postgres
-        restart: always
-        ports:
-            - '127.0.0.1:5433:5432'
-        environment:
-            POSTGRES_USER: ${POSTGRES_USER:-postgres}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
-            POSTGRES_DB: ${POSTGRES_DB:-goodlearn}
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-        networks:
-            - goodlearn_network
-        healthcheck:
-            test:
-                [
-                    'CMD-SHELL',
-                    'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-goodlearn}',
-                ]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+  postgres:
+    image: postgres:17.6-alpine
+    container_name: goodlearn-postgres
+    restart: always
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-goodlearn}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - goodlearn_network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-goodlearn}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    minio:
-        image: minio/minio:latest
-        container_name: goodlearn-minio
-        restart: always
-        ports:
-            - '127.0.0.1:9000:9000'
-            - '127.0.0.1:9001:9001'
-        environment:
-            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-12345678}
-            MINIO_REGION: us-east-1
-        command: server /data --console-address ":9001"
-        volumes:
-            - minio_data:/data
-        networks:
-            - goodlearn_network
-        healthcheck:
-            test:
-                [
-                    'CMD-SHELL',
-                    'curl -f http://localhost:9000/minio/health/live || exit 1',
-                ]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+  minio:
+    image: minio/minio:latest
+    container_name: goodlearn-minio
+    restart: always
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-12345678}
+      MINIO_REGION: us-east-1
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - goodlearn_network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -f http://localhost:9000/minio/health/live || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    vocal-scoring:
-        build:
-            context: ./vocal-scoring-backend
-            dockerfile: Dockerfile
-        container_name: goodlearn-vocal
-        restart: always
-        volumes:
-            - vocal_uploads:/app/uploads
-            - vocal_data:/app/data
-        networks:
-            - goodlearn_network
+  vocal-scoring:
+    build:
+      context: ./vocal-scoring-backend
+      dockerfile: Dockerfile
+    container_name: goodlearn-vocal
+    restart: always
+    volumes:
+      - vocal_uploads:/app/uploads
+      - vocal_data:/app/data
+    networks:
+      - goodlearn_network
 
-    backend:
-        build:
-            context: ./Backend
-            dockerfile: Dockerfile
-        container_name: goodlearn-backend
-        restart: always
-        ports:
-            - '127.0.0.1:5000:5000'
-        depends_on:
-            postgres:
-                condition: service_healthy
-            redis:
-                condition: service_healthy
-            minio:
-                condition: service_healthy
-        networks:
-            - goodlearn_network
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: goodlearn-backend
+    restart: always
+    ports:
+      - "127.0.0.1:5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - goodlearn_network
 
-    frontend:
-        build:
-            context: ./Frontend
-            dockerfile: Dockerfile
-        container_name: goodlearn-frontend
-        restart: always
-        ports:
-            - '127.0.0.1:3000:3000'
-        networks:
-            - goodlearn_network
-
-    vieneu-api:
-        build:
-            context: ./VieNeu-TTS
-            dockerfile: Dockerfile
-        container_name: goodlearn-vieneu-api
-        restart: always
-        command: "uv run python web_stream.py"
-        volumes:
-            - ./VieNeu-TTS:/app
-        networks:
-            - goodlearn_network
-
-    vieneu-web:
-        build:
-            context: ./VieNeu-TTS
-            dockerfile: Dockerfile
-        container_name: goodlearn-vieneu-web
-        restart: always
-        command: "uv run vieneu-web"
-        ports:
-            - '127.0.0.1:7860:7860' # Thay 7860 bằng port thực tế của giao diện web TTS
-        volumes:
-            - ./VieNeu-TTS:/app
-        networks:
-            - goodlearn_network
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: goodlearn-frontend
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - goodlearn_network
 
 volumes:
-    redis_data:
-    postgres_data:
-    minio_data:
-    vocal_uploads:
-    vocal_data:
+  redis_data:
+  postgres_data:
+  minio_data:
+  vocal_uploads:
+  vocal_data:
 
 networks:
-    goodlearn_network:
-        driver: bridge
+  goodlearn_network:
+    driver: bridge

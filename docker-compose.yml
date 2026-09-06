@@ -27,7 +27,7 @@ services:
     container_name: goodlearn-postgres
     restart: always
     ports:
-      - "127.0.0.1:5433:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
@@ -74,7 +74,7 @@ services:
 
   vocal-scoring:
     build:
-      context: ./vocal-scoring-backend
+      context: ./SongService
       dockerfile: Dockerfile
     container_name: goodlearn-vocal
     restart: always
@@ -101,6 +101,8 @@ services:
         condition: service_healthy
     networks:
       - goodlearn_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
     build:
